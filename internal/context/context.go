@@ -227,7 +227,9 @@ func (c *PCFContext) NewPCFUe(Supi string) (*UeContext, error) {
 		newUeContext := &UeContext{}
 		newUeContext.SmPolicyData = make(map[string]*UeSmPolicyData)
 		newUeContext.AMPolicyData = make(map[string]*UeAMPolicyData)
-		newUeContext.PolAssociationIDGenerator = 1
+		newUeContext.UEPolicyData = make(map[string]*UeUEPolicyData)
+		newUeContext.AmPolicyAssociationIDGenerator = 1
+		newUeContext.UePolicyAssociationIDGenerator = 1
 		newUeContext.AppSessionIDGenerator = idgenerator.NewGenerator(1, math.MaxInt64)
 		newUeContext.Supi = Supi
 		c.UePool.Store(Supi, newUeContext)

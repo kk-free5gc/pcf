@@ -13,6 +13,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/free5gc/openapi"
+	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/pcf/internal/logger"
+	"github.com/free5gc/pcf/internal/util"
 )
 
 func (s *Server) getUePolicyRoutes() []Route {
@@ -45,17 +49,120 @@ func (s *Server) getUePolicyRoutes() []Route {
 }
 
 func (s *Server) HTTPDeleteIndividualUEPolicyAssociation(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{})
+	polAssoId := c.Param("polAssoId")
+	logger.UePolicyLog.Infof("WNC: HTTPDeleteIndividualUEPolicyAssociation - Policy Association ID: %s", polAssoId)
+
+	if polAssoId == "" {
+		problemDetails := &models.ProblemDetails{
+			Title:  util.ERROR_INITIAL_PARAMETERS,
+			Status: http.StatusBadRequest,
+		}
+		logger.UePolicyLog.Errorf("WNC: Missing polAssoId parameter")
+		c.JSON(http.StatusBadRequest, problemDetails)
+		return
+	}
+
+	s.Processor().HandleDeleteUEPoliciesPolAssoId(c, polAssoId)
 }
 
 func (s *Server) HTTPReadIndividualUEPolicyAssociation(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{})
+	polAssoId := c.Param("polAssoId")
+	logger.UePolicyLog.Infof("WNC: HTTPReadIndividualUEPolicyAssociation - Policy Association ID: %s", polAssoId)
+
+	if polAssoId == "" {
+		problemDetails := &models.ProblemDetails{
+			Title:  util.ERROR_INITIAL_PARAMETERS,
+			Status: http.StatusBadRequest,
+		}
+		logger.UePolicyLog.Errorf("WNC: Missing polAssoId parameter")
+		c.JSON(http.StatusBadRequest, problemDetails)
+		return
+	}
+
+	s.Processor().HandleGetUEPoliciesPolAssoId(c, polAssoId)
 }
 
 func (s *Server) HTTPReportObservedEventTriggersForIndividualUEPolicyAssociation(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{})
+	polAssoId := c.Param("polAssoId")
+	logger.UePolicyLog.Infof("WNC: HTTPReportObservedEventTriggersForIndividualUEPolicyAssociation - Policy Association ID: %s", polAssoId)
+
+	var policyAssociationUpdateRequest models.PcfUePolicyControlPolicyAssociationUpdateRequest
+
+	requestBody, err := c.GetRawData()
+	if err != nil {
+		problemDetail := models.ProblemDetails{
+			Title:  "System failure",
+			Status: http.StatusInternalServerError,
+			Detail: err.Error(),
+			Cause:  "SYSTEM_FAILURE",
+		}
+		logger.UePolicyLog.Errorf("WNC: Get Request Body error: %+v", err)
+		c.JSON(http.StatusInternalServerError, problemDetail)
+		return
+	}
+
+	err = openapi.Deserialize(&policyAssociationUpdateRequest, requestBody, "application/json")
+	if err != nil {
+		problemDetail := "[Request Body] " + err.Error()
+		rsp := models.ProblemDetails{
+			Title:  "Malformed request syntax",
+			Status: http.StatusBadRequest,
+			Detail: problemDetail,
+		}
+		logger.UePolicyLog.Errorf("WNC: Request deserialization error: %s", problemDetail)
+		c.JSON(http.StatusBadRequest, rsp)
+		return
+	}
+
+	if polAssoId == "" {
+		problemDetails := &models.ProblemDetails{
+			Title:  util.ERROR_INITIAL_PARAMETERS,
+			Status: http.StatusBadRequest,
+		}
+		logger.UePolicyLog.Errorf("WNC: Missing polAssoId parameter")
+		c.JSON(http.StatusBadRequest, problemDetails)
+		return
+	}
+
+	s.Processor().HandleUpdatePostUEPoliciesPolAssoId(c, polAssoId, policyAssociationUpdateRequest)
 }
 
 func (s *Server) HTTPCreateIndividualUEPolicyAssociation(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{})
+	var policyAssociationRequest models.PcfUePolicyControlPolicyAssociationRequest
+	requestBody, err := c.GetRawData()
+	if err != nil {
+		problemDetail := models.ProblemDetails{
+			Title:  "System failure",
+			Status: http.StatusInternalServerError,
+			Detail: err.Error(),
+			Cause:  "SYSTEM_FAILURE",
+		}
+		logger.UePolicyLog.Errorf("WNC: Get Request Body error: %+v", err)
+		c.JSON(http.StatusInternalServerError, problemDetail)
+		return
+	}
+
+	err = openapi.Deserialize(&policyAssociationRequest, requestBody, "application/json")
+	if err != nil {
+		problemDetail := "[Request Body] " + err.Error()
+		rsp := models.ProblemDetails{
+			Title:  "Malformed request syntax",
+			Status: http.StatusBadRequest,
+			Detail: problemDetail,
+		}
+		logger.UePolicyLog.Errorln("WNC:", problemDetail)
+		c.JSON(http.StatusBadRequest, rsp)
+		return
+	}
+
+	if policyAssociationRequest.Supi == "" || policyAssociationRequest.NotificationUri == "" {
+		rsp := util.GetProblemDetail("Missing Mandatory IE", util.ERROR_REQUEST_PARAMETERS)
+		logger.UePolicyLog.Errorln("WNC:", rsp.Detail)
+		c.JSON(int(rsp.Status), rsp)
+		return
+	}
+
+	polAssoId, _ := c.Params.Get("polAssoId")
+
+	s.Processor().HandlePostUEPolicies(c, polAssoId, policyAssociationRequest)
 }

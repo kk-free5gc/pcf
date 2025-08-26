@@ -23,6 +23,7 @@ var (
 	PolicyAuthLog *logrus.Entry
 	ProcLog       *logrus.Entry
 	SmPolicyLog   *logrus.Entry
+	UePolicyLog   *logrus.Entry
 	UtilLog       *logrus.Entry
 )
 
@@ -40,7 +41,7 @@ func init() {
 	CtxLog = NfLog.WithField(logger_util.FieldCategory, "CTX")
 	GinLog = NfLog.WithField(logger_util.FieldCategory, "GIN")
 	SBILog = NfLog.WithField(logger_util.FieldCategory, "SBI")
-	AmPolicyLog = NfLog.WithField(logger_util.FieldCategory, "AmPol")
+	AmPolicyLog = NfLog.WithField(logger_util.FieldCategory, "AMPolicy")
 	BdtPolicyLog = NfLog.WithField(logger_util.FieldCategory, "BdtPol")
 	ConsumerLog = NfLog.WithField(logger_util.FieldCategory, "Consumer")
 	CallbackLog = NfLog.WithField(logger_util.FieldCategory, "Callback")
@@ -48,5 +49,6 @@ func init() {
 	PolicyAuthLog = NfLog.WithField(logger_util.FieldCategory, "PolAuth")
 	ProcLog = NfLog.WithField(logger_util.FieldCategory, "Proc")
 	SmPolicyLog = NfLog.WithField(logger_util.FieldCategory, "SMpolicy")
+	UePolicyLog = NfLog.WithField(logger_util.FieldCategory, "UEPolicy")
 	UtilLog = NfLog.WithField(logger_util.FieldCategory, "Util")
 }

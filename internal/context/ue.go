@@ -19,8 +19,10 @@ type UeContext struct {
 	Gpsi                      string
 	Pei                       string
 	GroupIds                  []string
-	PolAssociationIDGenerator uint32
+	AmPolicyAssociationIDGenerator uint32
+	UePolicyAssociationIDGenerator uint32
 	AMPolicyData              map[string]*UeAMPolicyData // use PolAssoId(ue.Supi-numPolId) as key
+	UEPolicyData              map[string]*UeUEPolicyData // use PolAssoId(ue.Supi-ue-policy-numPolId) as key
 
 	// Udr Ref
 	UdrUri string
@@ -64,6 +66,35 @@ type UeAMPolicyData struct {
 	Pras map[string]models.PresenceInfo
 	// related to UDR Subscription Data
 	AmPolicyData *models.AmPolicyData // Svbscription Data
+	// Corresponding UE
+	PcfUe *UeContext
+}
+
+type UeUEPolicyData struct {
+	PolAssoId         string
+	AccessType        models.AccessType
+	NotificationUri   string
+	ServingPlmn       *models.PlmnIdNid
+	AltNotifIpv4Addrs []string
+	AltNotifIpv6Addrs []string
+	AltNotifFqdns     []string
+	Pei               string
+	UserLoc           *models.UserLocation
+	TimeZone          string
+	RatType           models.RatType
+	GroupIds          []string
+	HPcfId            string
+	UePolReq          string
+	Guami             *models.Guami
+	ServiceName       models.ServiceName
+	ServingNfId       string
+	// Policy Association specific
+	Triggers    []models.PcfUePolicyControlRequestTrigger
+	SuppFeat    string
+	// Presence reporting areas
+	Pras        map[string]models.PresenceInfo
+	// TODO: UE Policy Data from UDR (when available)
+	// UePolicyData *models.UePolicyData
 	// Corresponding UE
 	PcfUe *UeContext
 }
@@ -127,6 +158,36 @@ func (ue *UeContext) NewUeAMPolicyData(
 	}
 	ue.AMPolicyData[assolId].Pras = make(map[string]models.PresenceInfo)
 	return ue.AMPolicyData[assolId]
+}
+
+// NewUeUEPolicyData returns created UeUEPolicyData data and insert this data to Ue.UEPolicyData with assolId as key
+func (ue *UeContext) NewUeUEPolicyData(
+	assolId string,
+	req models.PcfUePolicyControlPolicyAssociationRequest,
+) *UeUEPolicyData {
+	ue.Gpsi = req.Gpsi
+	ue.Pei = req.Pei
+	ue.GroupIds = req.GroupIds
+	ue.UEPolicyData[assolId] = &UeUEPolicyData{
+		PolAssoId:         assolId,
+		AltNotifIpv4Addrs: req.AltNotifIpv4Addrs,
+		AltNotifIpv6Addrs: req.AltNotifIpv6Addrs,
+		AltNotifFqdns:     req.AltNotifFqdns,
+		AccessType:        req.AccessType,
+		NotificationUri:   req.NotificationUri,
+		ServingPlmn:       req.ServingPlmn,
+		TimeZone:          req.TimeZone,
+		RatType:           req.RatType,
+		HPcfId:            req.HPcfId,
+		UePolReq:          req.UePolReq,
+		Guami:             req.Guami,
+		UserLoc:           req.UserLoc,
+		ServiceName:       req.ServiceName,
+		ServingNfId:       req.ServingNfId,
+		PcfUe:             ue,
+	}
+	ue.UEPolicyData[assolId].Pras = make(map[string]models.PresenceInfo)
+	return ue.UEPolicyData[assolId]
 }
 
 // returns UeSmPolicyData and insert related info to Ue with smPolId

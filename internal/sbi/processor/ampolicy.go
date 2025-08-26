@@ -216,7 +216,7 @@ func (p *Processor) PostPoliciesProcedure(polAssoId string,
 	ue.UdrUri = udrUri
 
 	response.Request = deepcopy.Copy(&policyAssociationRequest).(*models.PcfAmPolicyControlPolicyAssociationRequest)
-	assolId := fmt.Sprintf("%s-%d", ue.Supi, ue.PolAssociationIDGenerator)
+	assolId := fmt.Sprintf("%s-am-policy-%d", ue.Supi, ue.AmPolicyAssociationIDGenerator)
 	amPolicy := ue.AMPolicyData[assolId]
 
 	if amPolicy == nil || amPolicy.AmPolicyData == nil {
@@ -256,7 +256,7 @@ func (p *Processor) PostPoliciesProcedure(polAssoId string,
 	// TODO: add Reports
 	// rsp.Triggers
 	// rsp.Pras
-	ue.PolAssociationIDGenerator++
+	ue.AmPolicyAssociationIDGenerator++
 	// Create location header for update, delete, get
 	locationHeader := util.GetResourceUri(models.ServiceName_NPCF_AM_POLICY_CONTROL, assolId)
 	logger.AmPolicyLog.Tracef("AMPolicy association Id[%s] Create", assolId)

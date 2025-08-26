@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -87,4 +88,39 @@ func (s *namfService) AmfStatusChangeSubscribe(amfUri string, guamiList []models
 		return nil, localErr
 	}
 	return nil, localErr
+}
+
+// N1N2MessageTransfer sends UE policy container to AMF for transparent delivery to UE
+// Following the same pattern as SMF's N1N2MessageTransfer implementation
+func (s *namfService) N1N2MessageTransfer(
+	ctx context.Context, supi string, n1n2Request models.N1N2MessageTransferRequest, apiPrefix string,
+) (*models.N1N2MessageTransferRspData, error) {
+	logger.ConsumerLog.Infof("WNC: PCF initiating N1N2MessageTransfer to AMF for SUPI: %s", supi)
+	
+	client := s.getNFCommunicationClient(apiPrefix)
+	if client == nil {
+		logger.ConsumerLog.Errorf("WNC: N1N2MessageTransfer client is nil for AMF URI: %s", apiPrefix)
+		return nil, fmt.Errorf("N1N2MessageTransfer client is nil: (%v)", apiPrefix)
+	}
+
+	n1n2MessageTransferRequest := &Communication.N1N2MessageTransferRequest{
+		UeContextId:                &supi,
+		N1N2MessageTransferRequest: &n1n2Request,
+	}
+
+	logger.ConsumerLog.Debugf("WNC: Sending N1N2MessageTransfer request to AMF: %s", apiPrefix)
+	
+	rsp, err := client.N1N2MessageCollectionCollectionApi.N1N2MessageTransfer(ctx, n1n2MessageTransferRequest)
+	if err != nil {
+		logger.ConsumerLog.Errorf("WNC: N1N2MessageTransfer failed: %v", err)
+		return nil, err
+	}
+	
+	if rsp == nil {
+		logger.ConsumerLog.Error("WNC: N1N2MessageTransfer response is nil")
+		return nil, fmt.Errorf("N1N2MessageTransfer response is nil")
+	}
+
+	logger.ConsumerLog.Infof("WNC: N1N2MessageTransfer completed successfully for SUPI: %s", supi)
+	return &rsp.N1N2MessageTransferRspData, nil
 }
