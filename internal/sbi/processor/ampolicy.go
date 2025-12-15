@@ -25,6 +25,10 @@ func (p *Processor) HandleDeletePoliciesPolAssoId(
 	if ue == nil || ue.AMPolicyData[polAssoId] == nil {
 		problemDetails := util.GetProblemDetail("polAssoId not found  in PCF", util.CONTEXT_NOT_FOUND)
 		c.JSON(int(problemDetails.Status), problemDetails)
+		// WNC: Return immediately after sending 404 response to prevent nil pointer dereference
+		// Without this return, execution continues to line 30 where ue.AMPolicyData is accessed
+		// even when ue is nil, causing a crash when AMF repeats delete requests
+		return
 	}
 
 	delete(ue.AMPolicyData, polAssoId)
