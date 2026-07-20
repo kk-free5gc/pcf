@@ -13,6 +13,7 @@ import (
 	"github.com/free5gc/openapi/models"
 	pcf_context "github.com/free5gc/pcf/internal/context"
 	"github.com/free5gc/pcf/internal/logger"
+	"github.com/free5gc/pcf/internal/policy"
 	"github.com/free5gc/pcf/internal/util"
 )
 
@@ -498,36 +499,26 @@ func (p *Processor) UpdateUEPolicy(ue *pcf_context.UeContext, polAssoId string) 
 func (p *Processor) buildUEPolicyContainer(ue *pcf_context.UeContext, polAssoId string) ([]byte, error) {
 	logger.UePolicyLog.Debugf("WNC: Building UE policy container for SUPI: %s, polAssoId: %s", ue.Supi, polAssoId)
 
-	// TODO: For now, we'll return a basic policy container
-	// In a full implementation, this should:
-	// 1. Load policy from UDR or configured sources
-	// 2. Build proper URSP rules and traffic descriptors
-	// 3. Support policy fragmentation for large payloads
-	// 4. Include PSI (Policy Set Information) for tracking
+	// Load the UE policy (URSP) from the configured YAML file and encode it as a
+	// "Manage UE Policy Command" (3GPP TS 24.501 UE policy container). The file is
+	// read fresh on every delivery, so editing it takes effect without restarting
+	// the PCF. `pcfcfg_ue_policy_wnc.yaml` may be a symlink to the active variant.
+	// The path is relative to the PCF process working directory (free5gc root).
+	configPath := "./config/pcfcfg_ue_policy_wnc.yaml"
+	cfg, err := policy.LoadUEPolicyConfigFromYAML(configPath)
+	if err != nil {
+		logger.UePolicyLog.Errorf("WNC: Failed to load UE policy config from %s: %v; using QXDM fallback",
+			configPath, err)
+		cfg = &policy.QXDMPolicyConfig
+	}
 
-	// For initial implementation, construct a minimal but valid policy container
-	// Following 3GPP TS 24.501 UE policy container format
+	payload, err := policy.BuildManageUEPolicyCommand(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("WNC: Failed to build Manage UE Policy Command: %v", err)
+	}
 
-	var payload []byte
-
-	// Procedure Transaction Identity (PTI) - using 1 for policy delivery
-	payload = append(payload, 0x01)
-
-	// Message Type: MANAGE UE POLICY COMMAND (0x01)
-	payload = append(payload, 0x01)
-
-	// UE policy section management list length (2 bytes, big-endian)
-	// For minimal implementation, we'll have an empty policy list
-	payload = append(payload, 0x00, 0x00) // 0 length policy list
-
-	logger.UePolicyLog.Debugf("WNC: Built minimal UE policy container with %d bytes for SUPI: %s",
+	logger.UePolicyLog.Infof("WNC: Built UE policy container with %d bytes for SUPI: %s",
 		len(payload), ue.Supi)
-
-	// TODO: Future enhancement - integrate with existing AMF policy building logic:
-	// - Load policy from configured YAML files
-	// - Use BuildManageUEPolicyCommand() from AMF policy package
-	// - Support complex URSP rules and traffic descriptors
-	// - Implement proper policy versioning and PSI tracking
 
 	return payload, nil
 }
