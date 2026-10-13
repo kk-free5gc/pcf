@@ -75,16 +75,18 @@ func (p *Processor) HandleCreateSmPolicyRequest(
 			request.SliceInfo,
 			request.Dnn,
 		)
-		smData = response.SmPolicyData
-		if sessionErr != nil || response == nil {
+		// [WNC] Check pd and response before reading response.SmPolicyData. The stock code read it
+		// first and panicked with a nil pointer when the UDR answered 404 (response == nil).
+		if pd != nil {
+			c.JSON(int(pd.Status), pd)
+			return
+		} else if sessionErr != nil || response == nil {
 			problemDetail := util.GetProblemDetail("Can't find UE SM Policy Data in UDR", util.USER_UNKNOWN)
 			logger.SmPolicyLog.Warnf("Can't find UE[%s] SM Policy Data in UDR", ue.Supi)
 			c.JSON(int(problemDetail.Status), problemDetail)
 			return
-		} else if pd != nil {
-			c.JSON(int(pd.Status), pd)
-			return
 		}
+		smData = response.SmPolicyData
 		// TODO: subscribe to UDR
 	} else {
 		smData = *smPolicyData.SmPolicyData
