@@ -210,8 +210,14 @@ func convertYAMLToInternalConfig(yamlConfig *YAMLUEPolicyConfig) (*UEPolicyConfi
 	// Convert instructions
 	for _, instruction := range plmnSublist.Instructions {
 		internalInstruction := InstructionConfig{
-			UPSC:       instruction.UPSC,
-			PolicyPart: UEPolicyPartConfig{Type: 1}, // URSP
+			UPSC: instruction.UPSC,
+		}
+		// WNC: an instruction with no policyParts deletes the UE policy section named by
+		// its UPSC (TS 24.501 Annex D). PolicyPart.Type stays 0 (a reserved part type) so
+		// buildInstruction encodes the UPSC only, with empty UE policy section contents.
+		if len(instruction.PolicyParts) > 0 {
+			// URSP
+			internalInstruction.PolicyPart.Type = 1
 		}
 
 		// Convert policy parts
@@ -395,6 +401,12 @@ func buildInstruction(instruction *InstructionConfig) ([]byte, error) {
 	upsc := instruction.UPSC
 	payload = append(payload, uint8(upsc>>8))
 	payload = append(payload, uint8(upsc))
+
+	// WNC: Type 0 means the YAML instruction had no policyParts. Empty UE policy section
+	// contents tell the UE to delete the section identified by PLMN ID + UPSC.
+	if instruction.PolicyPart.Type == 0 {
+		return payload, nil
+	}
 
 	// Build UE policy part
 	policyPartPayload, err := buildUEPolicyPart(&instruction.PolicyPart)
